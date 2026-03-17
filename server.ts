@@ -64,6 +64,63 @@ if (!adminExists) {
   db.prepare("INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)").run("Admin", "admin@admin.com", hash, "admin");
 }
 
+// Seed mock data if DB is fresh (no vendors yet)
+const vendorCount = (db.prepare("SELECT COUNT(*) as count FROM users WHERE role = 'vendor'").get() as any).count;
+if (vendorCount === 0) {
+  const insertUser = db.prepare("INSERT INTO users (name, email, password, role, phone) VALUES (?, ?, ?, ?, ?)");
+  const insertService = db.prepare("INSERT INTO services (vendor_id, title, description, price, category) VALUES (?, ?, ?, ?, ?)");
+  const insertOrder = db.prepare("INSERT INTO orders (user_id, service_id, vendor_id, status) VALUES (?, ?, ?, ?)");
+
+  // Vendors
+  const vendorHash = bcrypt.hashSync("vendor123", 10);
+  const v1 = insertUser.run("Ahmed Al-Rashid", "ahmed@vendor.com", vendorHash, "vendor", "+1-555-0101").lastInsertRowid;
+  const v2 = insertUser.run("Sara Mitchell", "sara@vendor.com", vendorHash, "vendor", "+1-555-0202").lastInsertRowid;
+  const v3 = insertUser.run("Carlos Rivera", "carlos@vendor.com", vendorHash, "vendor", "+1-555-0303").lastInsertRowid;
+  const v4 = insertUser.run("Priya Sharma", "priya@vendor.com", vendorHash, "vendor", "+1-555-0404").lastInsertRowid;
+
+  // Users / Customers
+  const userHash = bcrypt.hashSync("user123", 10);
+  const u1 = insertUser.run("John Carter", "john@user.com", userHash, "user", "+1-555-1001").lastInsertRowid;
+  const u2 = insertUser.run("Emily Davis", "emily@user.com", userHash, "user", "+1-555-1002").lastInsertRowid;
+  const u3 = insertUser.run("Michael Brown", "michael@user.com", userHash, "user", "+1-555-1003").lastInsertRowid;
+  const u4 = insertUser.run("Fatima Hassan", "fatima@user.com", userHash, "user", "+1-555-1004").lastInsertRowid;
+  const u5 = insertUser.run("Lucas Wong", "lucas@user.com", userHash, "user", "+1-555-1005").lastInsertRowid;
+
+  // Services — Ahmed (Plumber)
+  const s1 = insertService.run(v1, "Emergency Pipe Repair", "24/7 emergency pipe fixing, leak detection and full repair service.", 120, "Plumber").lastInsertRowid;
+  const s2 = insertService.run(v1, "Bathroom Installation", "Complete bathroom fixture installation including toilet, sink and shower.", 350, "Plumber").lastInsertRowid;
+
+  // Services — Sara (House Cleaning)
+  const s3 = insertService.run(v2, "Deep Home Cleaning", "Top-to-bottom deep cleaning of your entire home using eco-friendly products.", 180, "House Cleaning").lastInsertRowid;
+  const s4 = insertService.run(v2, "Move-In/Move-Out Clean", "Thorough cleaning for property handover, spotless and move-in ready.", 250, "House Cleaning").lastInsertRowid;
+
+  // Services — Carlos (Electrician)
+  const s5 = insertService.run(v3, "Electrical Panel Upgrade", "Safe upgrade of electrical panels up to 200A, certified and inspected.", 450, "Electrician").lastInsertRowid;
+  const s6 = insertService.run(v3, "Smart Home Wiring", "Professional installation of smart switches, outlets and EV charging.", 300, "Electrician").lastInsertRowid;
+
+  // Services — Priya (House Painting)
+  const s7 = insertService.run(v4, "Interior Room Painting", "Full interior room painting with premium paints, 2 coats included.", 200, "House Painting").lastInsertRowid;
+  const s8 = insertService.run(v4, "Exterior House Painting", "Complete exterior painting with weather-resistant paint for lasting results.", 600, "House Painting").lastInsertRowid;
+
+  // Orders — mix of completed, pending, cancelled
+  insertOrder.run(u1, s1, v1, "completed");
+  insertOrder.run(u1, s3, v2, "completed");
+  insertOrder.run(u1, s5, v3, "pending");
+  insertOrder.run(u2, s2, v1, "completed");
+  insertOrder.run(u2, s4, v2, "pending");
+  insertOrder.run(u2, s7, v4, "completed");
+  insertOrder.run(u3, s6, v3, "completed");
+  insertOrder.run(u3, s8, v4, "cancelled");
+  insertOrder.run(u3, s1, v1, "pending");
+  insertOrder.run(u4, s3, v2, "completed");
+  insertOrder.run(u4, s5, v3, "completed");
+  insertOrder.run(u4, s7, v4, "pending");
+  insertOrder.run(u5, s2, v1, "completed");
+  insertOrder.run(u5, s4, v2, "cancelled");
+  insertOrder.run(u5, s6, v3, "completed");
+  insertOrder.run(u5, s8, v4, "completed");
+}
+
 async function startServer() {
   const app = express();
   const PORT = process.env.PORT ? parseInt(process.env.PORT) : 5000;
